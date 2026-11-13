@@ -1,0 +1,17 @@
+{
+  "name": "@dicto/darwin-x64",
+  "version": "0.1.0",
+  "description": "The dicto scanner as a Node-API addon for darwin-x64",
+  "license": "MIT",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "dicto.node",
+  "files": [
+    "dicto.node"
+  ],
+  "preferUnplugged": true
+}

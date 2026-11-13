@@ -1,0 +1,20 @@
+{
+  "name": "@dicto/linux-arm64-gnu",
+  "version": "0.1.0",
+  "description": "The dicto scanner as a Node-API addon for linux-arm64-gnu",
+  "license": "MIT",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "libc": [
+    "glibc"
+  ],
+  "main": "dicto.node",
+  "files": [
+    "dicto.node"
+  ],
+  "preferUnplugged": true
+}

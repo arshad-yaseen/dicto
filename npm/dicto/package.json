@@ -1,0 +1,79 @@
+{
+  "name": "dicto",
+  "version": "0.1.0",
+  "description": "Translations keyed by the text you write, kept in sync by a native scanner and filled in by your AI agent",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "dicto": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "default": "./dist/vite.js"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "default": "./dist/next.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "imports": {
+    "#host": {
+      "react-server": "./dist/host/react-server.js",
+      "default": "./dist/host/default.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc && chmod +x dist/cli/index.js"
+  },
+  "optionalDependencies": {
+    "@dicto/darwin-arm64": "0.1.0",
+    "@dicto/darwin-x64": "0.1.0",
+    "@dicto/linux-arm64-gnu": "0.1.0",
+    "@dicto/linux-arm64-musl": "0.1.0",
+    "@dicto/linux-x64-gnu": "0.1.0",
+    "@dicto/linux-x64-musl": "0.1.0",
+    "@dicto/win32-arm64": "0.1.0",
+    "@dicto/win32-x64": "0.1.0"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": ">=19",
+    "vite": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "keywords": [
+    "i18n",
+    "translation",
+    "localization",
+    "vite",
+    "nextjs",
+    "react"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "About": "概要",
+  "Hello, {name}!": "こんにちは、{name}さん！",
+  "Home": "ホーム",
+  "Plain text can use | and // freely.": "普通のテキストでは | や // を自由に使えます。",
+  "Read more on the <link>about page</link>.": "詳しくは<link>概要ページ</link>をご覧ください。",
+  "This text is rendered on the server.": "このテキストはサーバーでレンダリングされています。",
+  "{count, plural, one {# click} other {# clicks}}": "{count, plural, other {#回クリック}}"
+}

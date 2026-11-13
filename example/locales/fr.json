@@ -1,0 +1,9 @@
+{
+  "About": "À propos",
+  "Hello, {name}!": "Bonjour, {name} !",
+  "Home": "Accueil",
+  "Plain text can use | and // freely.": "Le texte simple peut utiliser | et // librement.",
+  "Read more on the <link>about page</link>.": "Pour en savoir plus, consultez la <link>page À propos</link>.",
+  "This text is rendered on the server.": "Ce texte est rendu sur le serveur.",
+  "{count, plural, one {# click} other {# clicks}}": "{count, plural, one {# clic} many {# de clics} other {# clics}}"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "dicto-root",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "npm/dicto",
+    "npm/native/*",
+    "example"
+  ],
+  "scripts": {
+    "build": "zig build && bun run --cwd npm/dicto build",
+    "test": "zig build test && bun run build && tsc && bun test",
+    "typecheck": "tsc --project npm/dicto --noEmit && tsc",
+    "format": "zig fmt build.zig src"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "dicto": "workspace:*",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

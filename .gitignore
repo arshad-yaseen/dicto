@@ -1,0 +1,8 @@
+node_modules/
+.zig-cache/
+zig-out/
+zig-pkg/
+dist/
+npm/native/*/dicto.node
+.DS_Store
+.tmp/

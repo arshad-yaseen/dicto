@@ -1,0 +1,17 @@
+{
+  "name": "@dicto/win32-x64",
+  "version": "0.1.0",
+  "description": "The dicto scanner as a Node-API addon for win32-x64",
+  "license": "MIT",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "dicto.node",
+  "files": [
+    "dicto.node"
+  ],
+  "preferUnplugged": true
+}

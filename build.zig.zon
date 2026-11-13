@@ -1,0 +1,17 @@
+.{
+    .name = .dicto,
+    .version = "0.1.0",
+    .fingerprint = 0x30712b5b742d690d,
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .yuku = .{
+            .url = "git+https://github.com/yuku-toolchain/yuku.git#d46da74b9f5e24526757744babd26f11f55a431e",
+            .hash = "yuku-0.28.0-m6rangtxEgAMw5KhUJs_EHRSBj2MjYSMC6kEAl5mu4i5",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
