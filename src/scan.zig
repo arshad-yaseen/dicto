@@ -113,8 +113,8 @@ fn normalize(arena: Allocator, root: []const u8) Allocator.Error![]const u8 {
 }
 
 fn run(arena: Allocator, io: Io, root: []const u8, files: walk.Files) Error!Result {
-    // Reading files stops scaling at about half the logical cores, where the kernel contends.
-    const workers_max = @import("bench_options").workers;
+    const cores = std.Thread.getCpuCount() catch 1;
+    const workers_max = if (builtin.os.tag.isDarwin()) @max(1, cores / 2) else cores;
     const workers_wanted = (files.ends.len + files_per_worker_min - 1) / files_per_worker_min;
     const workers = try arena.alloc(Worker, @min(workers_max, workers_wanted));
     for (workers) |*worker| worker.* = .{ .output = .{ .gpa = arena } };
