@@ -59,6 +59,9 @@ fn addAddon(b: *std.Build, platform: Platform) *std.Build.Step {
     const target = b.resolveTargetQuery(query);
     const yuku = b.dependency("yuku", .{ .target = target, .optimize = .fast });
 
+    const bench_options = b.addOptions();
+    if (workers == null) workers = b.option(usize, "workers", "workers") orelse 4;
+    bench_options.addOption(usize, "workers", workers.?);
     const addon = b.addLibrary(.{
         .name = "dicto",
         .linkage = .dynamic,
@@ -69,7 +72,10 @@ fn addAddon(b: *std.Build, platform: Platform) *std.Build.Step {
             .strip = true,
             // Worker threads need the C library's thread-local storage inside a host that has one.
             .link_libc = query.os_tag == .linux,
-            .imports = &.{.{ .name = "parser", .module = yuku.module("parser") }},
+            .imports = &.{
+                .{ .name = "parser", .module = yuku.module("parser") },
+                .{ .name = "bench_options", .module = bench_options.createModule() },
+            },
         }),
     });
     addon.linker_allow_shlib_undefined = true;
@@ -78,3 +84,5 @@ fn addAddon(b: *std.Build, platform: Platform) *std.Build.Step {
     files.addCopyFileToSource(addon.getEmittedBin(), b.fmt("npm/native/{s}/dicto.node", .{platform.name}));
     return &files.step;
 }
+
+var workers: ?usize = null;

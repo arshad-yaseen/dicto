@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { rmSync } from "node:fs";
 import { join } from "node:path";
 import dicto from "dicto/vite";
 import { build, createServer } from "vite";
@@ -27,8 +28,9 @@ async function until(condition: () => boolean): Promise<void> {
   }
 }
 
-test("the dev server adds new messages on save and removes none", async () => {
+test("the dev server follows each saved file", async () => {
   const root = project("vite-dev", {
+    ".gitignore": "/generated\n",
     "src/main.ts": main,
     "locales/fr.json": JSON.stringify({ "Hello, {name}!": "Bonjour, {name} !" }),
   });
@@ -49,23 +51,31 @@ test("the dev server adds new messages on save and removes none", async () => {
       hasWarned: false,
     },
   });
+  const types = () => read(root, "locales/index.d.ts");
   try {
-    await until(() => read(root, "locales/index.d.ts").includes('| "Hello, {name}!"'));
+    await until(() => types().includes('| "Hello, {name}!"'));
 
     write(root, { "src/page.ts": 'import { t } from "dicto";\nt("Saved");\nt(String(1));\n' });
     await until(() => "Saved" in catalog(root, "fr"));
     expect(catalog(root, "fr")).toEqual({ "Hello, {name}!": "Bonjour, {name} !", Saved: "" });
-    expect(read(root, "locales/index.d.ts")).toContain('| "Saved"');
+    expect(types()).toContain('| "Saved"');
     expect(warnings).toEqual(["dicto: src/page.ts:3:3 t must be called with a string literal"]);
 
     write(root, { "src/page.ts": 'import { t } from "dicto";\nt("Renamed");\n' });
     await until(() => "Renamed" in catalog(root, "fr"));
     expect(Object.keys(catalog(root, "fr"))).toEqual(["Hello, {name}!", "Renamed", "Saved"]);
+    expect(types()).not.toContain('"Saved"');
 
     write(root, { "src/page.ts": 'import { t } from "dicto";\nt("Half typed"' });
     write(root, { "src/other.ts": 'import { t } from "dicto";\nt("While broken");\n' });
-    await Bun.sleep(200);
-    expect("While broken" in catalog(root, "fr")).toBe(false);
+    await until(() => "While broken" in catalog(root, "fr"));
+    expect(types()).toContain('| "Renamed"');
+
+    write(root, { "generated/api.ts": 'import { t } from "dicto";\nt("Generated");\n' });
+    rmSync(join(root, "src/other.ts"));
+    await until(() => !types().includes('"While broken"'));
+    expect("While broken" in catalog(root, "fr")).toBe(true);
+    expect(types()).not.toContain('"Generated"');
   } finally {
     await server.close();
   }

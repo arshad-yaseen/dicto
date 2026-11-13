@@ -14,7 +14,7 @@ Translations keyed by the English text. Write `t("...")`, and dicto keeps one JS
 - Type-checked arguments, autocomplete for existing messages
 - ICU plurals, selects, and components
 - No API keys: your AI agent translates
-- Native scanner: about 20 ms for 3,000 files
+- Fast: all of VS Code (16,000 files) in under half a second
 
 ## Setup
 

@@ -1,10 +1,11 @@
 import { type FSWatcher, readdirSync, watch } from "node:fs";
-import { isAbsolute, join, relative } from "node:path";
-import { folder, sync } from "./catalogs.ts";
-import { reasons } from "./scan.ts";
+import { basename, extname, isAbsolute, join, relative, sep } from "node:path";
+import { folder, update } from "./catalogs.ts";
+import { reasons, rescan, scan } from "./scan.ts";
 
 const source = /\.[cm]?[jt]sx?$/;
 const settleMs = 10;
+const rescanMax = 256;
 
 export interface Log {
   warn(message: string): void;
@@ -12,25 +13,67 @@ export interface Log {
 }
 
 export function follow(root: string, log: Log): (path: string) => void {
-  const catalogs = join(root, folder);
+  const files = new Map<string, string[]>();
+  const counts = new Map<string, number>();
   const warned = new Set<string>();
-  const timer = setTimeout(() => {
+  const pending = new Set<string>();
+  let everything = true;
+
+  const replace = (path: string, next: string[]): boolean => {
+    let changed = false;
+    for (const message of new Set(files.get(path))) {
+      const count = counts.get(message)! - 1;
+      if (count === 0) counts.delete(message);
+      else counts.set(message, count);
+      changed ||= count === 0;
+    }
+    for (const message of new Set(next)) {
+      const count = counts.get(message) ?? 0;
+      counts.set(message, count + 1);
+      changed ||= count === 0;
+    }
+    if (next.length > 0) files.set(path, next);
+    else files.delete(path);
+    return changed;
+  };
+
+  const flush = (): void => {
+    const full = everything;
+    const paths = [...pending];
+    everything = false;
+    pending.clear();
     try {
-      for (const { path, line, column, kind } of sync(root, { prune: false }).problems) {
+      const result = full ? scan(root) : rescan(root, paths);
+      const broken = new Set<string>();
+      for (const { path, line, column, kind } of result.problems) {
+        if (kind === "syntax") {
+          broken.add(path);
+          continue;
+        }
         const warning = `dicto: ${path}:${line}:${column} ${reasons[kind]}`;
-        if (kind === "syntax" || warned.has(warning)) continue;
+        if (!warned.has(warning)) log.warn(warning);
         warned.add(warning);
-        log.warn(warning);
       }
+      const fresh = new Map(result.files.map((file) => [file.path, file.messages]));
+      let changed = full && files.size === 0;
+      for (const path of full ? new Set([...files.keys(), ...fresh.keys()]) : paths) {
+        if (!broken.has(path)) changed = replace(path, fresh.get(path) ?? []) || changed;
+      }
+      if (changed) update(root, [...counts.keys()].sort(), false);
     } catch (error) {
       log.error(String(error));
     }
-  }, settleMs);
+  };
+
+  const timer = setTimeout(flush, settleMs);
   return (path) => {
-    const inCatalogs = relative(catalogs, path);
-    if (source.test(path) && (inCatalogs.startsWith("..") || isAbsolute(inCatalogs))) {
-      timer.refresh();
-    }
+    const local = relative(root, path).split(sep).join("/");
+    if (local.startsWith("..") || isAbsolute(local) || local.startsWith(`${folder}/`)) return;
+    if (source.test(local)) pending.add(local);
+    else if (basename(local) === ".gitignore" || extname(local) === "") everything = true;
+    else return;
+    if (pending.size > rescanMax) everything = true;
+    timer.refresh();
   };
 }
 

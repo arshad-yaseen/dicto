@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { type Kind, type Node, parse, pluralCategories, sourceLocale } from "../message.ts";
-import { type Scan, scan } from "./scan.ts";
+import { type Problem, scan } from "./scan.ts";
 
 export const folder = "locales";
 
@@ -11,7 +11,10 @@ export type Catalog =
   | { locale: string; translations: Map<string, string> }
   | { locale: string; error: string };
 
-export interface Sync extends Scan {
+export interface Sync {
+  messages: string[];
+  problems: Problem[];
+  complete: boolean;
   catalogs: Catalog[];
 }
 
@@ -27,19 +30,28 @@ interface Shape {
 }
 
 export function sync(root: string, { prune }: { prune: boolean }): Sync {
-  const scanned = scan(root);
-  const directory = join(root, folder);
-  if (!scanned.complete || !existsSync(directory)) return { ...scanned, catalogs: [] };
+  const { files, problems } = scan(root);
+  const messages = [...new Set(files.flatMap((file) => file.messages))].sort();
+  const complete = problems.every((problem) => problem.kind !== "syntax");
+  const catalogs = complete ? update(root, messages, prune) : [];
+  return { messages, problems, complete, catalogs };
+}
 
-  const messages = scanned.messages.sort();
+/**
+ * Adds the messages each catalog lacks and, with `prune`, removes the ones not in `messages`.
+ * Rewrites the generated module, and writes a file only when it changes.
+ */
+export function update(root: string, messages: string[], prune: boolean): Catalog[] {
+  const directory = join(root, folder);
+  if (!existsSync(directory)) return [];
   const catalogs = readdirSync(directory)
     .filter((name) => name.endsWith(".json"))
     .sort()
-    .map((name) => update(join(directory, name), messages, prune));
+    .map((name) => updateCatalog(join(directory, name), messages, prune));
   const locales = catalogs.flatMap((catalog) => ("error" in catalog ? [] : [catalog.locale]));
   write(join(directory, "index.js"), loaders(locales));
   write(join(directory, "index.d.ts"), declarations(locales, messages));
-  return { ...scanned, catalogs };
+  return catalogs;
 }
 
 export function verify({ messages, catalogs }: Sync): Verdict[] {
@@ -70,7 +82,7 @@ export function verify({ messages, catalogs }: Sync): Verdict[] {
   return source.invalid.length > 0 ? [source, ...verdicts] : verdicts;
 }
 
-function update(path: string, messages: string[], prune: boolean): Catalog {
+function updateCatalog(path: string, messages: string[], prune: boolean): Catalog {
   const locale = basename(path, ".json");
   if (!isLocaleTag(locale)) return { locale, error: "is not a locale" };
   const text = readFileSync(path, "utf8");

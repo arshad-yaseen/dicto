@@ -8,9 +8,13 @@ export interface Problem {
 }
 
 export interface Scan {
-  messages: string[];
+  files: { path: string; messages: string[] }[];
   problems: Problem[];
-  complete: boolean;
+}
+
+interface Native {
+  scan(root: string): Scan;
+  rescan(root: string, paths: string[]): Scan;
 }
 
 export const reasons: Record<Problem["kind"], string> = {
@@ -19,9 +23,12 @@ export const reasons: Record<Problem["kind"], string> = {
   import: 't must be imported by name from "dicto"',
 };
 
-export const scan: (root: string) => Scan = load();
+const native = load();
 
-function load(): (root: string) => Scan {
+export const scan: Native["scan"] = native.scan;
+export const rescan: Native["rescan"] = native.rescan;
+
+function load(): Native {
   const require = createRequire(import.meta.url);
   const { platform, arch } = process;
   const targets = platform === "linux" ? [`${arch}-gnu`, `${arch}-musl`] : [arch];

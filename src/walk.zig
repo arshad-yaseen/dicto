@@ -180,6 +180,43 @@ pub fn walk(arena: Allocator, io: Io, root: []const u8) Error!Files {
     return .{ .bytes = walker.bytes.items, .ends = walker.ends.items };
 }
 
+pub fn admits(arena: Allocator, io: Io, root: []const u8, relative: []const u8) Error!bool {
+    assert(std.fs.path.isAbsolute(root));
+    if (relative.len == 0 or relative[0] == '/' or !isSource(std.fs.path.basename(relative))) {
+        return false;
+    }
+    var walker: Walker = .{ .arena = arena, .io = io, .root_len = 0 };
+    var rules = try walker.inherit(root);
+    try walker.enter(root);
+    const base_len = walker.path.items.len;
+
+    var start: usize = 0;
+    while (true) {
+        const end = std.mem.findScalarPos(u8, relative, start, '/') orelse relative.len;
+        const name = relative[start..end];
+        const is_directory = end < relative.len;
+        if (std.mem.eql(u8, name, "..") or std.mem.eql(u8, name, ".")) return false;
+        if (is_directory and (std.mem.eql(u8, name, ".git") or std.mem.eql(u8, name, "node_modules"))) {
+            return false;
+        }
+
+        walker.path.shrinkRetainingCapacity(base_len);
+        try walker.path.appendSlice(arena, relative[0..start]);
+        const directory_len: u32 = @intCast(walker.path.items.len);
+        var directory = Dir.openDirAbsolute(io, walker.path.items, .{}) catch |err| switch (err) {
+            error.FileNotFound, error.NotDir => return false,
+            else => return unreadable(err),
+        };
+        defer directory.close(io);
+        rules = try walker.load(directory, rules);
+
+        try walker.path.appendSlice(arena, name);
+        if (walker.rules.ignored(rules, walker.path.items, directory_len, is_directory)) return false;
+        if (!is_directory) return true;
+        start = end + 1;
+    }
+}
+
 fn kindOf(io: Io, directory: Dir, name: []const u8) !std.Io.File.Kind {
     const stat = try directory.statFile(io, name, .{ .follow_symlinks = false });
     return stat.kind;

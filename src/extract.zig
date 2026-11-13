@@ -23,12 +23,18 @@ pub const Problem = struct {
     };
 };
 
+pub const Parsed = struct {
+    file: u32,
+    messages_start: u32,
+    messages_end: u32,
+};
+
 pub const Output = struct {
     gpa: Allocator,
     bytes: std.ArrayList(u8) = .empty,
     ends: std.ArrayList(u32) = .empty,
+    parsed: std.ArrayList(Parsed) = .empty,
     problems: std.ArrayList(Problem) = .empty,
-    complete: bool = true,
 
     pub fn message(output: *const Output, index: usize) []const u8 {
         const start = if (index == 0) 0 else output.ends.items[index - 1];
@@ -65,7 +71,10 @@ pub fn extract(
 
     var tree = try parser.parse(scratch, source, .{
         .source_type = .fromPath(path),
-        .lang = .fromPath(path),
+        .lang = switch (ast.Lang.fromPath(path)) {
+            .js => .jsx,
+            else => |lang| lang,
+        },
         .preserve_parens = false,
         .comments = .none,
     });
@@ -73,7 +82,6 @@ pub fn extract(
 
     for (tree.diagnostics.items) |diagnostic| {
         if (diagnostic.severity != .@"error") continue;
-        output.complete = false;
         return output.report(file, source, .syntax, diagnostic.span.start);
     }
 
@@ -85,7 +93,13 @@ pub fn extract(
         .tree = &tree,
         .semantic = &semantic,
     };
+    const messages_start: u32 = @intCast(output.ends.items.len);
     try module.read(records);
+    try output.parsed.append(output.gpa, .{
+        .file = file,
+        .messages_start = messages_start,
+        .messages_end = @intCast(output.ends.items.len),
+    });
 }
 
 fn mentionsPackage(source: []const u8) bool {
@@ -204,7 +218,7 @@ fn expectExtract(path: []const u8, source: []const u8, expected: Expected) !void
     const partial = for (expected.problems) |want| {
         if (want[0] == .syntax) break true;
     } else false;
-    try std.testing.expectEqual(!partial, output.complete);
+    if (partial) try std.testing.expectEqual(0, output.parsed.items.len);
 }
 
 test "messages of a module" {
@@ -218,6 +232,13 @@ test "messages of a module" {
         \\  </main>
         \\);
     , .{ .messages = &.{ "Home", "Hello, {name}!", "Open // ticket status", "Café \"quoted\"" } });
+}
+
+test "JSX in a JavaScript file" {
+    try expectExtract("app.js",
+        \\import { t } from "dicto";
+        \\export const App = () => <p title={t("Title")}>{t("Body")}</p>;
+    , .{ .messages = &.{ "Title", "Body" } });
 }
 
 test "only the imported binding counts" {
